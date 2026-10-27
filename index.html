@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QuickBite | Transparent Checkout</title>
+  <style>
+    :root {
+      --orange: #f97316;
+      --orange-dark: #ea580c;
+      --ink: #172033;
+      --muted: #64748b;
+      --line: #e2e8f0;
+      --surface: #ffffff;
+      --page: #f8fafc;
+      --green: #059669;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; background: var(--page); color: var(--ink);
+      font-family: Arial, Helvetica, sans-serif; line-height: 1.5;
+    }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    .site-header {
+      position: sticky; top: 0; z-index: 5; background: var(--surface);
+      border-bottom: 1px solid var(--line);
+    }
+    .header-inner, main, footer { width: min(100% - 32px, 1050px); margin: 0 auto; }
+    .header-inner {
+      min-height: 76px; display: flex; align-items: center;
+      justify-content: space-between; gap: 16px;
+    }
+    .brand { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+    .logo {
+      background: var(--orange); color: white; padding: 8px 13px;
+      border-radius: 12px; font-weight: 800; font-size: 20px;
+    }
+    .tag {
+      background: #ffedd5; color: #9a3412; border-radius: 99px;
+      padding: 4px 10px; font-size: 12px; font-weight: 700;
+    }
+    #step-indicator { color: var(--muted); font-size: 13px; text-align: right; }
+    main {
+      display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(270px, 1fr);
+      gap: 24px; padding: 30px 0 48px; align-items: start;
+    }
+    .panel {
+      background: var(--surface); border: 1px solid var(--line);
+      border-radius: 18px; padding: 24px; box-shadow: 0 3px 12px #0f172a08;
+    }
+    .main-column, .sidebar { display: grid; gap: 20px; }
+    h1, h2, h3, p { margin-top: 0; }
+    h1, h2 { font-size: 22px; line-height: 1.3; margin-bottom: 18px; }
+    h3 { font-size: 16px; margin-bottom: 12px; }
+    .section-heading {
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 12px; border-bottom: 1px solid var(--line); padding-bottom: 14px;
+    }
+    .section-heading h1, .section-heading h2 { margin: 0; }
+    .muted { color: var(--muted); font-size: 13px; }
+    .cart-item {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 14px; padding: 18px 0; border-bottom: 1px solid #f1f5f9;
+    }
+    .item-info { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .food-icon {
+      display: grid; place-items: center; width: 50px; height: 50px;
+      flex: 0 0 50px; border-radius: 12px; background: #fff7ed; font-size: 25px;
+    }
+    .item-name { font-weight: 700; margin-bottom: 2px; }
+    .item-options { color: var(--muted); font-size: 12px; }
+    .item-controls { display: flex; align-items: center; gap: 12px; }
+    .item-price { font-weight: 700; white-space: nowrap; }
+    .qty-control {
+      display: flex; align-items: center; border: 1px solid var(--line);
+      border-radius: 9px; overflow: hidden; background: #f8fafc;
+    }
+    .qty-control button {
+      border: 0; background: transparent; padding: 5px 10px; color: var(--ink);
+    }
+    .qty-control button:hover { background: #e2e8f0; }
+    .qty-number { min-width: 28px; text-align: center; font-size: 13px; }
+    .promo-row { display: flex; gap: 8px; margin-top: 20px; }
+    .promo-row input, .field input {
+      width: 100%; border: 1px solid #cbd5e1; border-radius: 10px;
+      padding: 11px 12px; background: white; color: var(--ink);
+    }
+    input:focus { outline: 2px solid #fdba74; border-color: var(--orange); }
+    .btn {
+      border: 0; border-radius: 10px; padding: 11px 16px; font-weight: 700;
+      transition: background .15s ease, transform .15s ease;
+    }
+    .btn:active { transform: translateY(1px); }
+    .btn-orange { background: var(--orange); color: white; }
+    .btn-orange:hover { background: var(--orange-dark); }
+    .btn-dark { background: #172033; color: white; }
+    .btn-dark:hover { background: #334155; }
+    .btn-green { background: var(--green); color: white; }
+    .btn-green:hover { background: #047857; }
+    .btn-outline { color: var(--muted); background: white; border: 1px solid var(--line); }
+    .btn-outline:hover { background: #f8fafc; }
+    .promo-message { margin: 10px 0 0; color: var(--green); font-size: 13px; font-weight: 700; }
+    .error-message { margin: 10px 0 0; color: #b91c1c; font-size: 13px; font-weight: 700; }
+    .hidden { display: none !important; }
+    .price-title { border-bottom: 1px solid var(--line); padding-bottom: 14px; }
+    .price-line { display: flex; justify-content: space-between; gap: 16px; margin: 12px 0; color: var(--muted); font-size: 14px; }
+    .price-line span:last-child { color: var(--ink); font-weight: 600; white-space: nowrap; }
+    .discount-line, .discount-line span:last-child { color: var(--green) !important; }
+    .total-line {
+      border-top: 1px solid var(--line); margin-top: 18px; padding-top: 17px;
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      font-weight: 800;
+    }
+    #calc-total { color: var(--orange-dark); font-size: 23px; white-space: nowrap; }
+    .fine-print { color: #94a3b8; font-size: 11px; margin: 10px 0 0; }
+    #action-container { margin-top: 22px; }
+    #btn-proceed { width: 100%; }
+    .checkout-fields { display: grid; gap: 16px; }
+    .field label { display: block; font-weight: 700; font-size: 13px; margin-bottom: 6px; }
+    .two-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .payment-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .payment-option {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 5px; min-height: 88px; padding: 10px 6px; border: 1px solid var(--line);
+      border-radius: 12px; background: white; text-align: center; font-size: 12px;
+      font-weight: 700; color: var(--ink);
+    }
+    .payment-option .payment-icon { font-size: 22px; }
+    .payment-option.selected { border: 2px solid var(--orange); background: #fff7ed; }
+    .form-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 22px; }
+    .success-panel { text-align: center; padding: 38px 24px; }
+    .success-icon {
+      width: 68px; height: 68px; border-radius: 50%; margin: 0 auto 18px;
+      display: grid; place-items: center; color: var(--green); background: #d1fae5; font-size: 34px;
+    }
+    .success-panel h1 { margin-bottom: 10px; }
+    .success-panel p { color: var(--muted); max-width: 440px; margin: 0 auto 20px; }
+    .order-note { font-size: 12px !important; margin-top: 14px !important; }
+    footer { text-align: center; color: #94a3b8; border-top: 1px solid var(--line); padding: 22px 0; font-size: 12px; }
+    @media (max-width: 760px) {
+      main { grid-template-columns: 1fr; padding-top: 20px; }
+      .sidebar { order: -1; }
+      .header-inner { align-items: flex-start; flex-direction: column; justify-content: center; padding: 12px 0; gap: 8px; }
+      #step-indicator { text-align: left; }
+    }
+    @media (max-width: 500px) {
+      .panel { padding: 17px; }
+      .cart-item { align-items: flex-start; flex-direction: column; }
+      .item-controls { width: 100%; justify-content: space-between; }
+      .two-columns { grid-template-columns: 1fr; }
+      .payment-options { grid-template-columns: 1fr; }
+      .payment-option { min-height: 60px; flex-direction: row; }
+      .form-actions { align-items: stretch; flex-direction: column-reverse; }
+      .form-actions button { width: 100%; }
+      .promo-row { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="brand">
+        <div class="logo">🍔 QuickBite</div>
+        <span class="tag">Transparent Pricing</span>
+      </div>
+      <div id="step-indicator" aria-live="polite">Step 1 of 2: Review Cart</div>
+    </div>
+  </header>
+
+  <main>
+    <section class="main-column" aria-label="Order process">
+      <section id="view-cart" class="panel">
+        <div class="section-heading">
+          <h1>Your Order Summary</h1>
+          <span id="item-count" class="muted">3 items</span>
+        </div>
+        <div id="cart-items">
+          <div class="cart-item">
+            <div class="item-info">
+              <div class="food-icon" aria-hidden="true">🍕</div>
+              <div>
+                <div class="item-name">Artisan Margherita Pizza</div>
+                <div class="item-options">Extra cheese, thin crust</div>
+              </div>
+            </div>
+            <div class="item-controls">
+              <span class="item-price">Tk 450</span>
+              <div class="qty-control" aria-label="Pizza quantity">
+                <button type="button" onclick="updateQty(1, -1)" aria-label="Decrease pizza quantity">−</button>
+                <span class="qty-number" id="qty-1">1</span>
+                <button type="button" onclick="updateQty(1, 1)" aria-label="Increase pizza quantity">+</button>
+              </div>
+            </div>
+          </div>
+          <div class="cart-item">
+            <div class="item-info">
+              <div class="food-icon" aria-hidden="true">🍔</div>
+              <div>
+                <div class="item-name">Classic Smash Burger</div>
+                <div class="item-options">Double patty, cheddar</div>
+              </div>
+            </div>
+            <div class="item-controls">
+              <span class="item-price">Tk 380</span>
+              <div class="qty-control" aria-label="Burger quantity">
+                <button type="button" onclick="updateQty(2, -1)" aria-label="Decrease burger quantity">−</button>
+                <span class="qty-number" id="qty-2">1</span>
+                <button type="button" onclick="updateQty(2, 1)" aria-label="Increase burger quantity">+</button>
+              </div>
+            </div>
+          </div>
+          <div class="cart-item">
+            <div class="item-info">
+              <div class="food-icon" aria-hidden="true">🥤</div>
+              <div>
+                <div class="item-name">Iced Lemon Mint Cooler</div>
+                <div class="item-options">Regular ice, low sweet</div>
+              </div>
+            </div>
+            <div class="item-controls">
+              <span class="item-price">Tk 150</span>
+              <div class="qty-control" aria-label="Drink quantity">
+                <button type="button" onclick="updateQty(3, -1)" aria-label="Decrease drink quantity">−</button>
+                <span class="qty-number" id="qty-3">1</span>
+                <button type="button" onclick="updateQty(3, 1)" aria-label="Increase drink quantity">+</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <form id="promo-form" class="promo-row">
+          <input id="promo-input" type="text" placeholder="Promo code (try WELCOME10)" aria-label="Promo code">
+          <button class="btn btn-dark" type="submit">Apply</button>
+        </form>
+        <p id="promo-msg" class="promo-message hidden" role="status"></p>
+        <p id="promo-error" class="error-message hidden" role="alert"></p>
+      </section>
+
+      <section id="view-checkout" class="panel hidden">
+        <div class="section-heading">
+          <h2>Delivery &amp; Payment Details</h2>
+        </div>
+        <form id="checkout-form">
+          <div class="checkout-fields">
+            <div class="field">
+              <label for="address">Delivery Address</label>
+              <input id="address" name="address" value="House 112, Road 12, Block A, Bashundhara" required>
+            </div>
+            <div class="two-columns">
+              <div class="field">
+                <label for="contact-name">Name</label>
+                <input id="contact-name" name="contactName" value="Sakibur Rahman" required>
+              </div>
+              <div class="field">
+                <label for="phone">Phone Number</label>
+                <input id="phone" name="phone" type="tel" value="01809876541" required>
+              </div>
+            </div>
+            <div>
+              <h3>Payment Method</h3>
+              <div class="payment-options" role="group" aria-label="Choose a payment method">
+                <button class="payment-option selected" type="button" data-payment="Online Card" aria-pressed="true">
+                  <span class="payment-icon">💳</span><span>Online Card</span>
+                </button>
+                <button class="payment-option" type="button" data-payment="bKash / Nagad" aria-pressed="false">
+                  <span class="payment-icon">📱</span><span>bKash / Nagad</span>
+                </button>
+                <button class="payment-option" type="button" data-payment="Cash on Delivery" aria-pressed="false">
+                  <span class="payment-icon">💵</span><span>Cash on Delivery</span>
+                </button>
+              </div>
+              <p class="muted" id="payment-note">Selected: Online Card (demo only)</p>
+            </div>
+          </div>
+          <div class="form-actions">
+            <button class="btn btn-outline" id="back-to-cart" type="button">← Back to Cart</button>
+            <button class="btn btn-green" type="submit">Place Order Now</button>
+          </div>
+        </form>
+      </section>
+
+      <section id="view-success" class="panel success-panel hidden" role="status">
+        <div class="success-icon" aria-hidden="true">✓</div>
+        <h1>Order Placed Successfully!</h1>
+        <p>Your food is being prepared and will arrive in approximately <strong>25 minutes</strong>. Thank you for using QuickBite with transparent pricing!</p>
+        <button class="btn btn-dark" id="new-order" type="button">Start New Order</button>
+        <p class="order-note">Demo prototype only — no real order or payment has been submitted.</p>
+      </section>
+    </section>
+
+    <aside class="sidebar" aria-label="Price breakdown">
+      <section class="panel">
+        <h3 class="price-title">Price Breakdown</h3>
+        <div class="price-line"><span>Items Subtotal</span><span id="calc-subtotal">Tk 980</span></div>
+        <div class="price-line"><span>Delivery Fee (Standard)</span><span id="calc-delivery">Tk 60</span></div>
+        <div class="price-line"><span>VAT &amp; Service Tax (5%)</span><span id="calc-tax">Tk 49</span></div>
+        <div id="discount-row" class="price-line discount-line hidden"><span>Promo Discount</span><span id="calc-discount">−Tk 100</span></div>
+        <div class="total-line"><span>Total Due</span><span id="calc-total">Tk 1,089</span></div>
+        <p class="fine-print">All taxes and mandatory fees are shown upfront. No hidden charges at checkout.</p>
+        <div id="action-container">
+          <button id="btn-proceed" class="btn btn-orange" type="button">Proceed to Checkout</button>
+        </div>
+      </section>
+    </aside>
+  </main>
+
+  <footer>QuickBite Transparent Checkout Prototype · Product Owner Trainee Assessment</footer>
+
+  <script>
+    "use strict";
+
+    const prices = { 1: 450, 2: 380, 3: 150 };
+    const quantities = { 1: 1, 2: 1, 3: 1 };
+    let discount = 0;
+    let selectedPayment = "Online Card";
+
+    const byId = (id) => document.getElementById(id);
+
+    function calculateTotals() {
+      const subtotal = Object.keys(prices).reduce((sum, id) => sum + prices[id] * quantities[id], 0);
+      const delivery = subtotal > 0 ? 60 : 0;
+      const tax = Math.round(subtotal * 0.05);
+      const activeDiscount = Math.min(discount, subtotal + delivery + tax);
+      const total = Math.max(0, subtotal + delivery + tax - activeDiscount);
+      const totalItems = Object.values(quantities).reduce((sum, quantity) => sum + quantity, 0);
+
+      byId("calc-subtotal").textContent = `Tk ${subtotal.toLocaleString("en-US")}`;
+      byId("calc-delivery").textContent = `Tk ${delivery.toLocaleString("en-US")}`;
+      byId("calc-tax").textContent = `Tk ${tax.toLocaleString("en-US")}`;
+      byId("calc-total").textContent = `Tk ${total.toLocaleString("en-US")}`;
+      byId("item-count").textContent = `${totalItems} item${totalItems === 1 ? "" : "s"}`;
+
+      if (discount > 0) {
+        byId("calc-discount").textContent = `−Tk ${activeDiscount.toLocaleString("en-US")}`;
+        byId("discount-row").classList.remove("hidden");
+      } else {
+        byId("discount-row").classList.add("hidden");
+      }
+    }
+
+    function updateQty(id, change) {
+      quantities[id] = Math.max(0, quantities[id] + change);
+      byId(`qty-${id}`).textContent = quantities[id];
+      calculateTotals();
+    }
+
+    function showView(view) {
+      ["cart", "checkout", "success"].forEach((name) => {
+        byId(`view-${name}`).classList.toggle("hidden", name !== view);
+      });
+      byId("step-indicator").textContent =
+        view === "cart" ? "Step 1 of 2: Review Cart" :
+        view === "checkout" ? "Step 2 of 2: Checkout" : "Complete";
+      byId("action-container").classList.toggle("hidden", view === "success");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    byId("btn-proceed").addEventListener("click", () => {
+      const totalItems = Object.values(quantities).reduce((sum, quantity) => sum + quantity, 0);
+      if (totalItems === 0) {
+        alert("Your cart is empty. Please add at least one item before checkout.");
+        return;
+      }
+      showView("checkout");
+    });
+
+    byId("back-to-cart").addEventListener("click", () => showView("cart"));
+
+    byId("promo-form").addEventListener("submit", (event) => {
+      event.preventDefault();
+      const code = byId("promo-input").value.trim().toUpperCase();
+      byId("promo-msg").classList.add("hidden");
+      byId("promo-error").classList.add("hidden");
+
+      if (code === "WELCOME10") {
+        discount = 100;
+        byId("promo-msg").textContent = "✓ Promo code WELCOME10 applied successfully — Tk 100 off.";
+        byId("promo-msg").classList.remove("hidden");
+        calculateTotals();
+      } else {
+        discount = 0;
+        byId("promo-error").textContent = code
+          ? 'Invalid promo code. Please try "WELCOME10".'
+          : "Please enter a promo code.";
+        byId("promo-error").classList.remove("hidden");
+        calculateTotals();
+      }
+    });
+
+    document.querySelectorAll("[data-payment]").forEach((button) => {
+      button.addEventListener("click", () => {
+        selectedPayment = button.dataset.payment;
+        document.querySelectorAll("[data-payment]").forEach((option) => {
+          const selected = option === button;
+          option.classList.toggle("selected", selected);
+          option.setAttribute("aria-pressed", String(selected));
+        });
+        byId("payment-note").textContent = `Selected: ${selectedPayment} (demo only)`;
+      });
+    });
+
+    byId("checkout-form").addEventListener("submit", (event) => {
+      event.preventDefault();
+      if (!byId("checkout-form").reportValidity()) return;
+      showView("success");
+    });
+
+    byId("new-order").addEventListener("click", () => {
+      quantities[1] = 1;
+      quantities[2] = 1;
+      quantities[3] = 1;
+      discount = 0;
+      selectedPayment = "Online Card";
+      [1, 2, 3].forEach((id) => { byId(`qty-${id}`).textContent = "1"; });
+      byId("promo-input").value = "";
+      byId("promo-msg").classList.add("hidden");
+      byId("promo-error").classList.add("hidden");
+      document.querySelectorAll("[data-payment]").forEach((option) => {
+        const selected = option.dataset.payment === selectedPayment;
+        option.classList.toggle("selected", selected);
+        option.setAttribute("aria-pressed", String(selected));
+      });
+      byId("payment-note").textContent = "Selected: Online Card (demo only)";
+      byId("checkout-form").reset();
+      byId("address").value = "House 112, Road 12, Block A, Bashundhara";
+      byId("contact-name").value = "Sakibur Rahman";
+      byId("phone").value = "01809876541";
+      calculateTotals();
+      showView("cart");
+    });
+
+    calculateTotals();
+  </script>
+</body>
+</html>
